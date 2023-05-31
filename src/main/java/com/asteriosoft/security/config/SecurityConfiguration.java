@@ -1,5 +1,6 @@
 package com.asteriosoft.security.config;
 
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -38,10 +39,12 @@ public class SecurityConfiguration {
                 .anonymous(AnonymousConfigurer::disable)
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(exceptionCustomHandler()))
                 .headers(HeadersConfigurer::xssProtection)
+                .headers(headers -> headers.frameOptions().sameOrigin())
                 .cors(coresConfigure -> coresConfigure.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login", "/error", "/bid").permitAll()
+                        .requestMatchers(PathRequest.toH2Console()).permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
