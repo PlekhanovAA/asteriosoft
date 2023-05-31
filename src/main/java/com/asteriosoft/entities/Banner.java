@@ -7,9 +7,7 @@ import lombok.*;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "banner")
@@ -28,14 +26,9 @@ public class Banner implements Comparable<Banner>, Serializable {
     private BigDecimal price;
     @Column(name = "is_deleted")
     private Boolean isDeleted;
-    @ManyToMany()
-    @JoinTable(
-            name = "category_banner",
-            joinColumns = {@JoinColumn(name = "banner_id")},
-            inverseJoinColumns = {@JoinColumn(name = "category_id")}
-    )
     @JsonManagedReference
-    Set<Category> categories = new HashSet<>();
+    @Transient
+    List<Category> categories = new ArrayList<>();
 
     @Override
     public int compareTo(Banner otherBanner) {

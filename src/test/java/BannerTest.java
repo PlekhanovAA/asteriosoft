@@ -14,7 +14,6 @@ import org.springframework.util.MultiValueMap;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -82,6 +81,7 @@ public class BannerTest {
                                     .header("Host", "localhost")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.price").value(100.50))
                     .andExpect(status().isOk());
             log.info("body: {}", result.andReturn().getResponse().getContentAsString());
         }
@@ -115,7 +115,7 @@ public class BannerTest {
     void testCreateBanner() throws Exception {
         String json = """
                 {
-                  "name": "new banner",
+                  "name": "new banner2",
                   "price": 100500,
                   "categories": ["category1", "category2"]
                 }

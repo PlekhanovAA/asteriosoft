@@ -1,7 +1,11 @@
 package com.asteriosoft.services;
 
+import com.asteriosoft.entities.Banner;
 import com.asteriosoft.entities.Category;
+import com.asteriosoft.entities.CategoryBanner;
 import com.asteriosoft.exceptions.CustomException;
+import com.asteriosoft.repository.BannerRepository;
+import com.asteriosoft.repository.CategoryBannerRepository;
 import com.asteriosoft.repository.CategoryRepository;
 import com.asteriosoft.utils.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +21,10 @@ public class CategoryService {
 
     @Autowired
     CategoryRepository categoryRepository;
+    @Autowired
+    BannerRepository bannerRepository;
+    @Autowired
+    CategoryBannerRepository categoryBannerRepository;
     @Autowired
     JsonHelper jsonHelper;
 
@@ -60,7 +68,11 @@ public class CategoryService {
     }
 
     private void isExistNotDeletedBannersVerify(Category category) {
-        if (category.getBanners().stream().anyMatch(banner -> !banner.getIsDeleted())) {
+        List<Long> bannerIdList = categoryBannerRepository.findByCategoryId(category.getId()).stream().
+                map(CategoryBanner::getBannerId).
+                toList();
+        List<Banner> bannerList = bannerRepository.findAllById(bannerIdList);
+        if (bannerList.stream().anyMatch(banner -> !banner.getIsDeleted())) {
             throw new CustomException("IMPOSSIBLE TO DELETE A CATEGORY. THERE ARE RELATED BANNERS");
         }
     }

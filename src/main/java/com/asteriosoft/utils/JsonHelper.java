@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,7 +42,7 @@ public class JsonHelper {
             throw new CustomException("VALUE price IS NOT CORRECT");
         }
         if (map.get("categories") != null) {
-            Set<Category> categoriesSet = categoryRepository.findByNameInAndIsDeletedFalse((ArrayList<String>) map.get("categories"));
+            List<Category> categoriesSet = categoryRepository.findByNameInAndIsDeletedFalse((ArrayList<String>) map.get("categories"));
             banner.setCategories(categoriesSet);
         }
         banner.setIsDeleted(false);

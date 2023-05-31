@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface CategoryBannerRepository extends CrudRepository<CategoryBanner, Long> {
     List<CategoryBanner> findByBannerId(Long bannerId);
+    List<CategoryBanner> findByCategoryIdIn(List<Long> categoryIdList);
+    List<CategoryBanner> findByCategoryId(Long categoryId);
 }

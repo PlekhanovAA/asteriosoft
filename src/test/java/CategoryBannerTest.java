@@ -1,6 +1,5 @@
 import com.asteriosoft.Application;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -83,7 +82,7 @@ public class CategoryBannerTest {
     @Order(3)
     void testNegativeDeleteCategory() throws Exception {
         ResultActions result = mockMvc.perform(
-                        get("/category/3")
+                        get("/category/4")
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
@@ -105,8 +104,8 @@ public class CategoryBannerTest {
     @Test
     @Order(5)
     void testPositiveDeleteCategory() throws Exception {
-        ResultActions result = mockMvc.perform(
-                        get("/category/3")
+        mockMvc.perform(
+                        get("/category/4")
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))

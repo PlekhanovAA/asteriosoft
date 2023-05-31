@@ -5,6 +5,7 @@ import com.asteriosoft.entities.Category;
 import com.asteriosoft.entities.CategoryBanner;
 import com.asteriosoft.repository.BannerRepository;
 import com.asteriosoft.repository.CategoryBannerRepository;
+import com.asteriosoft.repository.CategoryRepository;
 import com.asteriosoft.utils.BannerFindHelper;
 import com.asteriosoft.utils.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +23,11 @@ public class BannerService {
     @Autowired
     BannerRepository bannerRepository;
     @Autowired
-    BannerFindHelper bannerFindHelper;
+    CategoryRepository categoryRepository;
     @Autowired
     CategoryBannerRepository categoryBannerRepository;
+    @Autowired
+    BannerFindHelper bannerFindHelper;
     @Autowired
     JsonHelper jsonHelper;
 
@@ -33,7 +36,14 @@ public class BannerService {
     }
 
     public ResponseEntity<List<Banner>> getAll() {
-        return new ResponseEntity<>(bannerRepository.findBannersByIsDeletedFalse(), HttpStatus.OK);
+        List<Banner> result = bannerRepository.findBannersByIsDeletedFalse();
+        for(Banner banner : result) {
+            List<Long> categoryIdList = categoryBannerRepository.findByBannerId(banner.getId()).stream().
+                    map(CategoryBanner::getCategoryId)
+                    .toList();
+            banner.setCategories(categoryRepository.findAllById(categoryIdList));
+        }
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     public ResponseEntity<List<Banner>> filterByName(String searchText) {
@@ -42,8 +52,19 @@ public class BannerService {
 
     public ResponseEntity<Object> create(Object bannerObject) {
         Banner newBanner = jsonHelper.getBannerFromObject(bannerObject);
-        bannerRepository.save(newBanner);
+        processingCreateBanner(newBanner);
         return new ResponseEntity<>(newBanner, HttpStatus.OK);
+    }
+
+    @Transactional
+    private void processingCreateBanner(Banner banner) {
+        banner = bannerRepository.save(banner);
+        List<CategoryBanner> newCategoryBannerList = new ArrayList<>();
+        for(Category category : banner.getCategories()) {
+            CategoryBanner cb = CategoryBanner.builder().bannerId(banner.getId()).categoryId(category.getId()).build();
+            newCategoryBannerList.add(cb);
+        }
+        categoryBannerRepository.saveAll(newCategoryBannerList);
     }
 
     public ResponseEntity<Object> update(Long id, Object bannerObject) {
@@ -51,22 +72,38 @@ public class BannerService {
         if (isExistBanner.isPresent()) {
             Banner updatedBanner = jsonHelper.getBannerFromObject(bannerObject);
             updatedBanner.setId(id);
-            processingUpdateBanner(updatedBanner);
+            prepareUpdateBanner(updatedBanner);
             return new ResponseEntity<>("BANNER IS UPDATED", HttpStatus.OK);
         } else {
             return new ResponseEntity<>("BANNER NOT EXIST", HttpStatus.BAD_REQUEST);
         }
     }
 
-    @Transactional
-    private void processingUpdateBanner(Banner banner) {
-        List<Long> newCategories = banner.getCategories().stream().map(Category::getId).toList();
-        List<CategoryBanner> oldCategoryBanner = categoryBannerRepository.findByBannerId(banner.getId());
-        List<Long> forDeleteCategoryBanner = oldCategoryBanner.stream().
-                filter(ocb -> !newCategories.contains(ocb.getCategoryId())).
-                map(CategoryBanner::getId).
+    private void prepareUpdateBanner(Banner banner) {
+        List<Long> newCategoryIdList = banner.getCategories().stream().map(Category::getId).toList();
+        List<Long> oldCategoryIdList = categoryBannerRepository.findByBannerId(banner.getId()).stream().
+                map(CategoryBanner::getCategoryId).
                 toList();
+        List<Long> forDeleteCategoryBanner = oldCategoryIdList.stream().
+                filter(oc -> !newCategoryIdList.contains(oc)).
+                toList();
+        List<Long> forCreateCategoryBannerCategoryIdList = newCategoryIdList.stream().
+                filter(nc -> !oldCategoryIdList.contains(nc)).
+                toList();
+        List<CategoryBanner> newCategoryBannerList = new ArrayList<>();
+        for(Long categoryId : forCreateCategoryBannerCategoryIdList) {
+            CategoryBanner cb = CategoryBanner.builder().bannerId(banner.getId()).categoryId(categoryId).build();
+            newCategoryBannerList.add(cb);
+        }
+        processingUpdateBanner(banner, forDeleteCategoryBanner, newCategoryBannerList);
+    }
+
+    @Transactional
+    private void processingUpdateBanner(Banner banner,
+                                        List<Long> forDeleteCategoryBanner,
+                                        List<CategoryBanner> newCategoryBannerList) {
         categoryBannerRepository.deleteAllById(forDeleteCategoryBanner);
+        categoryBannerRepository.saveAll(newCategoryBannerList);
         bannerRepository.save(banner);
     }
 

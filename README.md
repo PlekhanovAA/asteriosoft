@@ -63,7 +63,7 @@ The result will look like this:
 localhost:8080/login
 ```
 A <strong>POST</strong> endpoint will return the <em>Authorization</em> header, whose value <u>should be passed in requests as a header <em>Authorization</em> value to private endpoints</u>.
-For successful authorization, the <em>Content-Type: application/x-www-form-urlencoded</em> header must be set in the request and the login/password must be passed in the request body.
+For successful authorization, the <em>Content-Type: application/x-www-form-urlencoded</em> header must be set in the request and the username/password must be passed in the request body.
 
 <h3>Available private endpoints</h3>
 

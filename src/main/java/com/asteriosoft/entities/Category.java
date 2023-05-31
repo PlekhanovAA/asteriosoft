@@ -1,15 +1,12 @@
 package com.asteriosoft.entities;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 @Entity
 @Table(name = "category")
@@ -28,9 +25,6 @@ public class Category implements Serializable {
     private String requestId;
     @Column(name = "is_deleted")
     private Boolean isDeleted;
-    @ManyToMany(mappedBy = "categories")
-    @JsonBackReference
-    private Set<Banner> banners = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {
