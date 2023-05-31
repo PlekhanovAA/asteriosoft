@@ -1,7 +1,7 @@
 import com.asteriosoft.Application;
-import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -48,7 +48,8 @@ public class BannerTest {
     @Test
     @Order(1)
     void testBanners() throws Exception {
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         mockMvc.perform(
                         get("/banners")
                                 .header("Authorization", authorizationHead)
@@ -58,8 +59,7 @@ public class BannerTest {
                 .andExpect(jsonPath("$[1].price").value(100.50))
                 .andExpect(status().isOk());
         stopwatch.stop();
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testBanners in milliseconds: {}", timeElapsed);
+        log.info("Execution time testBanners in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
@@ -70,7 +70,8 @@ public class BannerTest {
         paramCat.add("cat_request_id_2");
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.addAll("cat", paramCat);
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         int numberOfRepetitions = 10;
         for (int i = 0; i <= numberOfRepetitions; i++) {
             String userAgent = RandomStringUtils.randomAlphabetic(8);
@@ -85,8 +86,7 @@ public class BannerTest {
             log.info("body: {}", result.andReturn().getResponse().getContentAsString());
         }
         stopwatch.stop();
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testBid in milliseconds: {}", timeElapsed);
+        log.info("Execution time testBid in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
@@ -95,7 +95,8 @@ public class BannerTest {
         String searchText = "r2";
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("searchText", searchText);
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         ResultActions result = mockMvc.perform(
                         get("/banners/filter")
                                 .params(params)
@@ -106,8 +107,7 @@ public class BannerTest {
                 .andExpect(status().isOk());
         stopwatch.stop();
         log.info("body: {}", result.andReturn().getResponse().getContentAsString());
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testFilterBanner in milliseconds: {}", timeElapsed);
+        log.info("Execution time testFilterBanner in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
@@ -120,7 +120,8 @@ public class BannerTest {
                   "categories": ["category1", "category2"]
                 }
                     """;
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         mockMvc.perform(
                         post("/banner")
                                 .content(json)
@@ -129,8 +130,8 @@ public class BannerTest {
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.price").value(100500))
                 .andExpect(status().isOk());
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testCreateBanner in milliseconds: {}", timeElapsed);
+        stopwatch.stop();
+        log.info("Execution time testCreateBanner in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
@@ -142,7 +143,8 @@ public class BannerTest {
                   "price": 10
                 }
                     """;
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         mockMvc.perform(
                         post("/banner/2")
                                 .content(json)
@@ -150,14 +152,15 @@ public class BannerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testUpdateBanner in milliseconds: {}", timeElapsed);
+        stopwatch.stop();
+        log.info("Execution time testUpdateBanner in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
     @Order(6)
     void testDeleteBanner() throws Exception {
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
         mockMvc.perform(
                         get("/banner/1")
                                 .header("Authorization", authorizationHead)
@@ -165,8 +168,7 @@ public class BannerTest {
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         stopwatch.stop();
-        long timeElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        log.info("Execution time testDeleteBanner in milliseconds: {}", timeElapsed);
+        log.info("Execution time testDeleteBanner in milliseconds: {}", stopwatch.getTime());
     }
 
 }

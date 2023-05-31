@@ -11,8 +11,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import java.util.concurrent.TimeUnit;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CategoryTest {
+public class CategoryBannerTest {
     private String authorizationHead;
 
     @Autowired
@@ -44,100 +42,75 @@ public class CategoryTest {
 
     @Test
     @Order(1)
-    void testCategories() throws Exception {
-        StopWatch stopwatch = new StopWatch();
-        stopwatch.start();
-        mockMvc.perform(
-                        get("/categories")
-                                .header("Authorization", authorizationHead)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].requestId").value("cat_request_id_1"))
-                .andExpect(jsonPath("$[1].requestId").value("cat_request_id_2"))
-                .andExpect(status().isOk());
-        stopwatch.stop();
-        log.info("Execution time testCategories in milliseconds: {}", stopwatch.getTime());
-    }
-
-    @Test
-    @Order(2)
-    void testFilterCategory() throws Exception {
-        String searchText = "y2";
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("searchText", searchText);
-        StopWatch stopwatch = new StopWatch();
-        stopwatch.start();
-        ResultActions result = mockMvc.perform(
-                        get("/categories/filter")
-                                .params(params)
-                                .header("Authorization", authorizationHead)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].name").value("category2"))
-                .andExpect(status().isOk());
-        stopwatch.stop();
-        log.info("body: {}", result.andReturn().getResponse().getContentAsString());
-        log.info("Execution time testFilterCategory in milliseconds: {}", stopwatch.getTime());
-    }
-
-    @Test
-    @Order(3)
     void testCreateCategory() throws Exception {
         String json = """
                 {
-                  "name": "new category",
-                  "requestId": "cat_request_id_new_category"
+                  "name": "category3",
+                  "requestId": "cat_request_id_3"
                 }
                     """;
-        StopWatch stopwatch = new StopWatch();
-        stopwatch.start();
         mockMvc.perform(
                         post("/category")
                                 .content(json)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.requestId").value("cat_request_id_new_category"))
+                .andExpect(jsonPath("$.requestId").value("cat_request_id_3"))
                 .andExpect(status().isOk());
-        stopwatch.stop();
-        log.info("Execution time testCreateCategory in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
-    @Order(4)
-    void testUpdateCategory() throws Exception {
+    @Order(2)
+    void testCreateBanner() throws Exception {
         String json = """
                 {
-                  "name": "category2_new_name",
-                  "requestId": "cat_new_request_id_2"
+                  "name": "new banner",
+                  "price": 333,
+                  "categories": ["category3"]
                 }
                     """;
-        StopWatch stopwatch = new StopWatch();
-        stopwatch.start();
         mockMvc.perform(
-                        post("/category/2")
+                        post("/banner")
                                 .content(json)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.price").value(333))
                 .andExpect(status().isOk());
-        stopwatch.stop();
-        log.info("Execution time testUpdateBanner in milliseconds: {}", stopwatch.getTime());
+    }
+
+    @Test
+    @Order(3)
+    void testNegativeDeleteCategory() throws Exception {
+        ResultActions result = mockMvc.perform(
+                        get("/category/3")
+                                .header("Authorization", authorizationHead)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError());
+        Assertions.assertTrue(result.andReturn().getResponse().getContentAsString().contains("IMPOSSIBLE"));
+    }
+
+    @Test
+    @Order(4)
+    void testDeleteBanner() throws Exception {
+        mockMvc.perform(
+                        get("/banner/3")
+                                .header("Authorization", authorizationHead)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
     }
 
     @Test
     @Order(5)
-    void testDeleteCategory() throws Exception {
-        StopWatch stopwatch = new StopWatch();
-        stopwatch.start();
-        mockMvc.perform(
+    void testPositiveDeleteCategory() throws Exception {
+        ResultActions result = mockMvc.perform(
                         get("/category/3")
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
-        stopwatch.stop();
-        log.info("Execution time testDeleteCategory in milliseconds: {}", stopwatch.getTime());
     }
 
 }
