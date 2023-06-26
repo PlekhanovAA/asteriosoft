@@ -38,7 +38,7 @@ public class CategoryService {
 
     public ResponseEntity<Object> create(Object categoryObject) {
         Category newCategory = jsonHelper.getCategoryFromObject(categoryObject);
-        categoryRepository.save(newCategory);
+        newCategory = categoryRepository.save(newCategory);
         return new ResponseEntity<>(newCategory, HttpStatus.OK);
     }
 

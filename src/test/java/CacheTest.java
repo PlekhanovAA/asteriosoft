@@ -1,15 +1,23 @@
 import com.asteriosoft.Application;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,13 +29,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CategoryBannerTest {
+public class CacheTest {
+
     private String authorizationHead;
+
+    @Autowired
+    CacheManager cacheManager;
 
     @Autowired
     private MockMvc mockMvc;
 
-    private Long newBannerId, newCategoryId;
+    private Long bannerForCacheId;
 
     @BeforeAll
     void testLogin() throws Exception {
@@ -42,34 +54,28 @@ public class CategoryBannerTest {
         authorizationHead = result.andReturn().getResponse().getHeader("Authorization");
     }
 
-    @Test
-    @Order(1)
-    void testCreateCategory() throws Exception {
-        String json = """
-                {
-                  "name": "category3",
-                  "requestId": "cat_request_id_3"
-                }
-                    """;
-        ResultActions result = mockMvc.perform(
-                        post("/category")
-                                .content(json)
+    @AfterAll
+    void deleteBannerForCache() throws Exception {
+        mockMvc.perform(
+                        get("/banner/" + bannerForCacheId)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.requestId").value("cat_request_id_3"))
                 .andExpect(status().isOk());
-        newCategoryId = Long.valueOf(JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id").toString());
     }
 
     @Test
-    @Order(2)
-    void testCreateBanner() throws Exception {
+    @Order(1)
+    void testCache() throws Exception {
+
+        StopWatch stopwatch = new StopWatch();
+        stopwatch.start();
+        multipleCalls(2L);
         String json = """
                 {
-                  "name": "new banner",
-                  "price": 333,
-                  "categories": ["category3"]
+                  "name": "new banner for cache",
+                  "price": 100500,
+                  "categories": ["category1", "category2"]
                 }
                     """;
         ResultActions result = mockMvc.perform(
@@ -78,43 +84,49 @@ public class CategoryBannerTest {
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.price").value(333))
                 .andExpect(status().isOk());
-        newBannerId = Long.valueOf(JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id").toString());
-    }
-
-    @Test
-    @Order(3)
-    void testNegativeDeleteCategory() throws Exception {
-        ResultActions result = mockMvc.perform(
-                        get("/category/" + newCategoryId)
-                                .header("Authorization", authorizationHead)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().is4xxClientError());
-        Assertions.assertTrue(result.andReturn().getResponse().getContentAsString().contains("IMPOSSIBLE"));
-    }
-
-    @Test
-    @Order(4)
-    void testDeleteBanner() throws Exception {
+        bannerForCacheId = Long.valueOf(JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id").toString());
+        multipleCalls(bannerForCacheId);
+        json = """
+                {
+                  "name": "banner for cache",
+                  "price": 100501
+                }
+                    """;
         mockMvc.perform(
-                        get("/banner/" + newBannerId)
+                        post("/banner/" + bannerForCacheId)
+                                .content(json)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+        multipleCalls(bannerForCacheId);
+        stopwatch.stop();
+        CacheStats stats = ((CaffeineCache) cacheManager.getCache("banners")).getNativeCache().stats();
+        log.info("Cache stats: {}", stats);
+        log.info("Execution time testBid in milliseconds: {}", stopwatch.getTime());
     }
 
-    @Test
-    @Order(5)
-    void testPositiveDeleteCategory() throws Exception {
-        mockMvc.perform(
-                        get("/category/" + newCategoryId)
-                                .header("Authorization", authorizationHead)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+    private void multipleCalls(Long resultId) throws Exception {
+        List<String> paramCat = new ArrayList<>();
+        paramCat.add("cat_request_id_1");
+        paramCat.add("cat_request_id_2");
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.addAll("cat", paramCat);
+        int numberOfRepetitions = 10;
+        for (int i = 0; i <= numberOfRepetitions; i++) {
+            String userAgent = RandomStringUtils.randomAlphabetic(8);
+            ResultActions result = mockMvc.perform(
+                            get("/bid")
+                                    .params(params)
+                                    .header("user-agent", userAgent)
+                                    .header("Host", "localhost")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.id").value(resultId))
+                    .andExpect(status().isOk());
+            log.info("body: {}", result.andReturn().getResponse().getContentAsString());
+        }
     }
 
 }

@@ -9,6 +9,8 @@ import com.asteriosoft.repository.CategoryRepository;
 import com.asteriosoft.utils.BannerFindHelper;
 import com.asteriosoft.utils.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,8 @@ import java.util.*;
 public class BannerService {
 
     @Autowired
+    CacheManager cacheManager;
+    @Autowired
     BannerRepository bannerRepository;
     @Autowired
     CategoryRepository categoryRepository;
@@ -30,6 +34,8 @@ public class BannerService {
     BannerFindHelper bannerFindHelper;
     @Autowired
     JsonHelper jsonHelper;
+
+    private final String bannerCacheName = "banners";
 
     public ResponseEntity<Object> getByCategories(List<String> catRequestIdList, HttpHeaders headers) {
         return bannerFindHelper.startHelping(catRequestIdList, headers);
@@ -52,12 +58,12 @@ public class BannerService {
 
     public ResponseEntity<Object> create(Object bannerObject) {
         Banner newBanner = jsonHelper.getBannerFromObject(bannerObject);
-        processingCreateBanner(newBanner);
+        newBanner = processingCreateBanner(newBanner);
         return new ResponseEntity<>(newBanner, HttpStatus.OK);
     }
 
     @Transactional
-    private void processingCreateBanner(Banner banner) {
+    private Banner processingCreateBanner(Banner banner) {
         banner = bannerRepository.save(banner);
         List<CategoryBanner> newCategoryBannerList = new ArrayList<>();
         for(Category category : banner.getCategories()) {
@@ -65,6 +71,7 @@ public class BannerService {
             newCategoryBannerList.add(cb);
         }
         categoryBannerRepository.saveAll(newCategoryBannerList);
+        return banner;
     }
 
     public ResponseEntity<Object> update(Long id, Object bannerObject) {
@@ -105,6 +112,11 @@ public class BannerService {
         categoryBannerRepository.deleteAllById(forDeleteCategoryBanner);
         categoryBannerRepository.saveAll(newCategoryBannerList);
         bannerRepository.save(banner);
+        final Cache cache = cacheManager.getCache(bannerCacheName);
+        if (cache == null) {
+            throw new IllegalArgumentException("invalid cache name: " + bannerCacheName);
+        }
+        cache.put(banner.getId(), banner);
     }
 
     public ResponseEntity<Object> delete(Long id) {
@@ -123,6 +135,11 @@ public class BannerService {
         categoryBannerRepository.deleteAllById(categoryBanners.stream().map(CategoryBanner::getId).toList());
         banner.setIsDeleted(true);
         bannerRepository.save(banner);
+        final Cache cache = cacheManager.getCache(bannerCacheName);
+        if (cache == null) {
+            throw new IllegalArgumentException("invalid cache name: " + bannerCacheName);
+        }
+        cache.evict(banner.getId());
     }
 
 }

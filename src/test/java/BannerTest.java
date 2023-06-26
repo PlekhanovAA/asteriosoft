@@ -1,4 +1,5 @@
 import com.asteriosoft.Application;
+import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.time.StopWatch;
@@ -30,6 +31,8 @@ public class BannerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    private Long newBannerId;
 
     @BeforeAll
     void testLogin() throws Exception {
@@ -71,20 +74,17 @@ public class BannerTest {
         params.addAll("cat", paramCat);
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
-        int numberOfRepetitions = 10;
-        for (int i = 0; i <= numberOfRepetitions; i++) {
-            String userAgent = RandomStringUtils.randomAlphabetic(8);
-            ResultActions result = mockMvc.perform(
-                            get("/bid")
-                                    .params(params)
-                                    .header("user-agent", userAgent)
-                                    .header("Host", "localhost")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.price").value(100.50))
-                    .andExpect(status().isOk());
-            log.info("body: {}", result.andReturn().getResponse().getContentAsString());
-        }
+        String userAgent = RandomStringUtils.randomAlphabetic(8);
+        ResultActions result = mockMvc.perform(
+                        get("/bid")
+                                .params(params)
+                                .header("user-agent", userAgent)
+                                .header("Host", "localhost")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.price").value(100.50))
+                .andExpect(status().isOk());
+        log.info("body: {}", result.andReturn().getResponse().getContentAsString());
         stopwatch.stop();
         log.info("Execution time testBid in milliseconds: {}", stopwatch.getTime());
     }
@@ -122,7 +122,7 @@ public class BannerTest {
                     """;
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
-        mockMvc.perform(
+        ResultActions result = mockMvc.perform(
                         post("/banner")
                                 .content(json)
                                 .header("Authorization", authorizationHead)
@@ -131,6 +131,7 @@ public class BannerTest {
                 .andExpect(jsonPath("$.price").value(100500))
                 .andExpect(status().isOk());
         stopwatch.stop();
+        newBannerId = Long.valueOf(JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id").toString());
         log.info("Execution time testCreateBanner in milliseconds: {}", stopwatch.getTime());
     }
 
@@ -139,14 +140,14 @@ public class BannerTest {
     void testUpdateBanner() throws Exception {
         String json = """
                 {
-                  "name": "new name for banner2",
+                  "name": "new name for banner",
                   "price": 10
                 }
                     """;
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
         mockMvc.perform(
-                        post("/banner/2")
+                        post("/banner/" + newBannerId)
                                 .content(json)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -162,7 +163,7 @@ public class BannerTest {
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
         mockMvc.perform(
-                        get("/banner/1")
+                        get("/banner/" + newBannerId)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))

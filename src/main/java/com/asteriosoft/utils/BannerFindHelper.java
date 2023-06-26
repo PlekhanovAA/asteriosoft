@@ -1,33 +1,34 @@
 package com.asteriosoft.utils;
 
+import com.asteriosoft.cache.BannerCache;
 import com.asteriosoft.entities.Banner;
 import com.asteriosoft.entities.Category;
 import com.asteriosoft.entities.CategoryBanner;
 import com.asteriosoft.entities.LogRecord;
-import com.asteriosoft.repository.BannerRepository;
 import com.asteriosoft.repository.CategoryBannerRepository;
 import com.asteriosoft.repository.CategoryRepository;
 import com.asteriosoft.repository.LogRecordRepository;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Component
+@Service
 public class BannerFindHelper {
 
     @Autowired
     CategoryRepository categoryRepository;
     @Autowired
-    BannerRepository bannerRepository;
-    @Autowired
     CategoryBannerRepository categoryBannerRepository;
     @Autowired
     LogRecordRepository logRecordRepository;
+    @Autowired
+    BannerCache bannerCache;
 
     public ResponseEntity<Object> startHelping(List<String> catRequestIdList, HttpHeaders headers) {
         LogRecord logRecord = new LogRecord();
@@ -59,14 +60,9 @@ public class BannerFindHelper {
     }
 
     private ResponseEntity<Object> historyVerify(List<Category> categoryList, LogRecord logRecord) {
-        Calendar today = Calendar.getInstance();
-        today.set(Calendar.HOUR_OF_DAY, 0);
-        today.set(Calendar.MINUTE, 0);
-        today.set(Calendar.SECOND, 0);
-        today.set(Calendar.MILLISECOND, 0);
-
+        Date today = DateUtils.truncate(new java.util.Date(), java.util.Calendar.DATE);
         List<LogRecord> history = logRecordRepository.findByUserIpAndUserAgentAndRequestTimeGreaterThan(
-                logRecord.getUserIp(), logRecord.getUserAgent(), new Date(today.getTimeInMillis()));
+                logRecord.getUserIp(), logRecord.getUserAgent(), today);
         List<Long> bannerIdsAlreadyShown = history.stream().map(LogRecord::getBannerId).toList();
         List<CategoryBanner> categoryBannerList = categoryBannerRepository.findByCategoryIdIn(categoryList.stream().map(Category::getId).toList());
         Set<Long> allBannerIdFromCategoriesList = categoryBannerList.stream().map(CategoryBanner::getBannerId).collect(Collectors.toSet());
@@ -79,7 +75,7 @@ public class BannerFindHelper {
             logRecord.setNoContentReason("NO BANNERS");
             return finishHelping(null, logRecord, HttpStatus.NO_CONTENT);
         }
-        Optional<Banner> mostExpensiveBanner = bannerRepository.findAllById(bannerIdForShowList).stream().sorted().findFirst();
+        Optional<Banner> mostExpensiveBanner = bannerCache.getBanners(bannerIdForShowList).stream().sorted().findFirst();
         return smallPreparing(mostExpensiveBanner.get(), logRecord);
     }
 

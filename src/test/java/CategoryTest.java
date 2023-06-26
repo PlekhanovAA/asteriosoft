@@ -1,4 +1,5 @@
 import com.asteriosoft.Application;
+import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.*;
@@ -26,6 +27,8 @@ public class CategoryTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    private Long newCategoryId;
 
     @BeforeAll
     void testLogin() throws Exception {
@@ -89,7 +92,7 @@ public class CategoryTest {
                     """;
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
-        mockMvc.perform(
+        ResultActions result = mockMvc.perform(
                         post("/category")
                                 .content(json)
                                 .header("Authorization", authorizationHead)
@@ -98,6 +101,7 @@ public class CategoryTest {
                 .andExpect(jsonPath("$.requestId").value("cat_request_id_new_category"))
                 .andExpect(status().isOk());
         stopwatch.stop();
+        newCategoryId = Long.valueOf(JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id").toString());
         log.info("Execution time testCreateCategory in milliseconds: {}", stopwatch.getTime());
     }
 
@@ -120,7 +124,7 @@ public class CategoryTest {
                                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         stopwatch.stop();
-        log.info("Execution time testUpdateBanner in milliseconds: {}", stopwatch.getTime());
+        log.info("Execution time testUpdateCategory in milliseconds: {}", stopwatch.getTime());
     }
 
     @Test
@@ -129,7 +133,7 @@ public class CategoryTest {
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
         mockMvc.perform(
-                        get("/category/3")
+                        get("/category/" + newCategoryId)
                                 .header("Authorization", authorizationHead)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
